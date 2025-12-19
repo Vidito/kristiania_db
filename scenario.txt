@@ -1,0 +1,318 @@
+NordicX Database Documentation
+SQL Database Schema and Implementation
+Entity-Relationship Diagram
+This has ER diagram been created using Mermaid js which is free and open source.
+ 
+Database Schema
+Database Creation
+-- Create the database
+CREATE DATABASE IF NOT EXISTS NordicX;
+USE NordicX;
+ 
+
+Table: Customer
+CREATE TABLE Customer (
+    CustomerID INT PRIMARY KEY AUTO_INCREMENT,
+    Name VARCHAR(100) NOT NULL,
+    Email VARCHAR(50) UNIQUE NOT NULL,
+    -- phone number can contain ++ sign or () hence Varchar type
+    Phone VARCHAR(30),
+    Address TEXT
+);
+
+Table: Supplier
+CREATE TABLE Supplier (
+    SupplierID INT PRIMARY KEY AUTO_INCREMENT,
+    Name VARCHAR(100) NOT NULL,
+    ContactInfo VARCHAR(150),
+    Address TEXT
+);
+
+Table: Product
+-- I'll use Decimal datatype instead of Float/Double since it is more exact
+-- for financial industry
+-- =====================================================
+CREATE TABLE Product (
+    ProductID INT PRIMARY KEY AUTO_INCREMENT,
+    SupplierID INT NOT NULL,
+    Name VARCHAR(100) NOT NULL,
+    Description TEXT,
+    -- check that price is not negative and is between 0.00 and 99999999.99
+    Price DECIMAL(10, 2) NOT NULL CHECK (Price >= 0),
+    -- Check that stock level is not negative
+    StockLevel INT NOT NULL DEFAULT 0 CHECK (StockLevel >= 0),
+    Category VARCHAR(50),
+    FOREIGN KEY (SupplierID) REFERENCES Supplier(SupplierID)
+        -- You cannot delete a supplier if products still reference it.
+        ON DELETE RESTRICT
+        -- If a supplier's ID changes, the change automatically updates in the
+        -- Products table.
+        ON UPDATE CASCADE
+);
+
+Table: Order
+-- Since 'Order' is a reserved keyword, I will use backticks
+-- =====================================================
+CREATE TABLE `Order` (
+    OrderID INT PRIMARY KEY AUTO_INCREMENT,
+    CustomerID INT NOT NULL,
+    OrderDate DATE NOT NULL,
+    TotalAmount DECIMAL(10, 2) NOT NULL CHECK (TotalAmount >= 0),
+    FOREIGN KEY (CustomerID) REFERENCES Customer(CustomerID)
+        ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+Table: OrderItem
+CREATE TABLE OrderItem (
+    OrderItemID INT PRIMARY KEY AUTO_INCREMENT,
+    OrderID INT NOT NULL,
+    ProductID INT NOT NULL,
+    Quantity INT NOT NULL CHECK (Quantity > 0),
+    Price DECIMAL(10, 2) NOT NULL CHECK (Price >= 0),
+    FOREIGN KEY (OrderID) REFERENCES `Order`(OrderID)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (ProductID) REFERENCES Product(ProductID)
+        ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+Table: Employee
+CREATE TABLE Employee (
+    EmployeeID INT PRIMARY KEY AUTO_INCREMENT,
+    Name VARCHAR(100) NOT NULL,
+    Position VARCHAR(50),
+    Email VARCHAR(50) UNIQUE NOT NULL,
+    Phone VARCHAR(30)
+);
+
+Table: Schedule
+CREATE TABLE Schedule (
+    ScheduleID INT PRIMARY KEY AUTO_INCREMENT,
+    EmployeeID INT NOT NULL,
+    ScheduleDate DATE NOT NULL,
+    ShiftDetails VARCHAR(100),
+    FOREIGN KEY (EmployeeID) REFERENCES Employee(EmployeeID)
+        -- if an employee is deleted from the Employee table all their
+        -- schedule details are deleted as well
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+ 
+Sample Data
+Insert Customers (10 records)
+-- ======================================
+INSERT INTO Customer (Name, Email, Phone, Address) VALUES
+('Vahid Niamadpour', 'vahid.niamadpour@gmail.com', '+47 123456789', 'Oslo, Norway'),
+('Gebremariam Assres', 'gebremariam.assres@yahoo.com', '+47 2134658', 'Oslo, Norway'),
+('John Smith', 'john.smith@hotmail.com', '+46 731234567', 'Gothenburg, Sweden'),
+('Ole Olesen', 'ole.olesen@mail.dk', '+47 531208755', 'Moss, Norway'),
+('Ingrid Olsen', 'ingrid.olsen@outlook.com', '+47 98877665', 'Oslo, Norway'),
+('Erik Svensson', 'erik.svensson@gmail.com', '+46 722334455', 'Malmö, Sweden'),
+('Kari Nilsen', 'kari.nilsen@online.no', '+47 94455667', 'Bergen, Norway'),
+('Anna Karlsson', 'anna.karlsson@icloud.com', '+46 733221100', 'Uppsala, Sweden'),
+('Jonas Berg', 'jonas.berg@mail.se', '+46 744556677', 'Västerås, Sweden'),
+('Freja Mortensen', 'freja.mortensen@mail.dk', '+45 82233445', 'Odense, Denmark');
+
+Insert Suppliers (10 records)
+-- ======================================
+INSERT INTO Supplier (Name, ContactInfo, Address) VALUES
+('Kristiania AB', 'contact@kristiania.no', 'Oslo, Norway'),
+('EcoTextiles Nordic', 'sales@ecotextiles.no', 'Trondheim, Norway'),
+('GreenLiving Supplies', 'info@greenliving.dk', 'Aalborg, Denmark'),
+('PureCeramics Oy', 'support@pureceramics.fi', 'Helsinki, Finland'),
+('ScandiHome Essentials', 'orders@scandihome.se', 'Lund, Sweden'),
+('NordicCraft Supplies', 'hello@nordiccraft.no', 'Bergen, Norway'),
+('FjordHome Products', 'support@fjordhome.no', 'Stavanger, Norway'),
+('Arctic Essentials AS', 'contact@arcticessentials.no', 'Tromsø, Norway'),
+('OsloDesign Partners', 'info@oslopartners.no', 'Oslo, Norway'),
+('VikingEco Materials', 'sales@vikingeco.no', 'Kristiansand, Norway');
+
+Insert Products (10 records)
+-- ======================================
+INSERT INTO Product (SupplierID, Name, Description, Price, StockLevel,
+Category) VALUES
+(1, 'Oak Wooden Chair', 'Sustainably sourced oak chair', 149.99, 25, 'Furniture'),
+(2, 'Organic Cotton Blanket', 'Soft organic cotton throw blanket', 89.99, 40,
+'Textiles'),
+(3, 'Reusable Glass Jars', 'Set of 3 reusable storage jars', 39.99, 50, 'Kitchen'),
+(4, 'Ceramic Dinner Plate', 'Handcrafted ceramic dinner plate', 24.99, 80,
+'Tableware'),
+(5, 'Natural Scented Candle', 'Soy wax candle with pine scent', 34.99, 70,
+'Lifestyle'),
+(6, 'Handmade Birch Shelf', 'Minimalist birch wall shelf', 129.99, 20, 'Furniture'),
+(7, 'Fjord Wool Rug', 'Thick wool rug inspired by Norwegian fjords', 199.99, 15,
+'Textiles'),
+(8, 'Arctic Steel Thermos', 'Insulated thermos for cold climates', 49.99, 60,
+'Outdoors'),
+(9, 'Oslo Desk Organizer', 'Modern wooden desk organizer', 59.99, 30, 'Office'),
+(10, 'VikingEco Storage Crate', 'Recycled wood storage crate', 44.99, 40, 'Storage');
+
+Insert Orders (10 records)
+-- ======================================
+INSERT INTO `Order` (CustomerID, OrderDate, TotalAmount) VALUES
+(1, '2025-01-10', 189.98),
+(2, '2025-01-12', 299.99),
+(3, '2025-01-15', 59.98),
+(4, '2025-01-18', 149.99),
+(5, '2025-01-20', 89.99),
+(6, '2025-01-22', 74.98),
+(7, '2025-01-25', 39.99),
+(8, '2025-01-27', 119.98),
+(9, '2025-01-28', 34.99),
+(10, '2025-01-30', 44.99);
+
+Insert Order Items (15 records)
+-- ======================================
+INSERT INTO OrderItem (OrderID, ProductID, Quantity, Price) VALUES
+(1, 3, 2, 89.99), (2, 2, 1, 299.99), (3, 4, 2, 29.99),
+(4, 1, 1, 149.99), (5, 3, 1, 89.99), (6, 8, 2, 19.99),
+(7, 5, 1, 39.99), (8, 7, 2, 24.99), (9, 9, 1, 34.99),
+(10, 10, 1, 44.99), (1, 6, 1, 19.99), (2, 7, 1, 24.99),
+(3, 5, 1, 39.99), (4, 8, 1, 19.99), (5, 9, 1, 34.99);
+
+Insert Employees (10 records)
+-- ======================================
+INSERT INTO Employee (Name, Position, Email, Phone) VALUES
+('Nils Eriksen', 'Store Manager', 'nils.eriksen@nordicx.com', '+47 701111111'),
+('Maria Holm', 'Sales Associate', 'maria.holm@nordicx.com', '+47 702222222'),
+('Oskar Nilsson', 'Inventory Coordinator', 'oskar.nilsson@nordicx.com',
+'+46 703333333'),
+('Liv Sørensen', 'Customer Support', 'liv.sorensen@nordicx.com', '+45 81112222'),
+('Anders Bjorn', 'Warehouse Staff', 'anders.bjorn@nordicx.com', '+47 95554433'),
+('Elin Karlstad', 'Sales Associate', 'elin.karlstad@nordicx.com', '+46 704444444'),
+('Thomas Lund', 'Logistics Manager', 'thomas.lund@nordicx.com', '+45 83334444'),
+('Sara Nyberg', 'Marketing Assistant', 'sara.nyberg@nordicx.com', '+46 705555555'),
+('Henrik Olsen', 'Store Assistant', 'henrik.olsen@nordicx.com', '+47 92223344'),
+('Ida Pettersson', 'HR Coordinator', 'ida.pettersson@nordicx.com', '+46 706666666');
+
+Insert Schedules (10 records)
+-- ======================================
+INSERT INTO Schedule (EmployeeID, ScheduleDate, ShiftDetails) VALUES
+(1, '2025-02-01', 'Morning Shift'), (2, '2025-02-01', 'Afternoon Shift'),
+(3, '2025-02-01', 'Full Day'), (4, '2025-02-02', 'Morning Shift'),
+(5, '2025-02-02', 'Afternoon Shift'), (6, '2025-02-03', 'Morning Shift'),
+(7, '2025-02-03', 'Full Day'), (8, '2025-02-04', 'Afternoon Shift'),
+(9, '2025-02-04', 'Morning Shift'), (10, '2025-02-05', 'Full Day');
+ 
+Required Queries
+Query 4: Customers by Purchase Date Range
+List customers who have made a purchase within a specific date range.
+SELECT DISTINCT c.CustomerID, c.Name, c.Email, o.OrderDate
+FROM Customer c
+JOIN `Order` o ON c.CustomerID = o.CustomerID
+WHERE o.OrderDate BETWEEN '2025-01-10' AND '2025-01-25'
+ORDER BY o.OrderDate;
+ 
+
+Query 5: Low Stock Products
+Find all products with stock levels below a certain threshold.
+SELECT p.ProductID, p.Name, p.Category, p.StockLevel, p.Price,
+       s.Name as SupplierName
+FROM Product p
+INNER JOIN Supplier s ON p.SupplierID = s.SupplierID
+WHERE p.StockLevel < 50
+ORDER BY p.StockLevel ASC;
+ 
+
+Query 6: Employee Work Schedule
+Retrieve the work schedule for a specific employee for a given date range.
+SELECT e.EmployeeID, e.Name as EmployeeName, e.Position,
+       s.ScheduleDate, s.ShiftDetails
+FROM Employee e
+INNER JOIN Schedule s ON e.EmployeeID = s.EmployeeID
+WHERE e.EmployeeID = 2
+  AND s.ScheduleDate BETWEEN '2025-02-01' AND '2025-02-04'
+ORDER BY s.ScheduleDate;
+ 
+
+Query 7: Total Sales by Product Category
+Calculate total sales for each product category in a specific period.
+SELECT p.Category, SUM(oi.Quantity * oi.Price) AS TotalSales
+FROM `Order` o
+JOIN OrderItem oi ON o.OrderID = oi.OrderID
+JOIN Product p ON oi.ProductID = p.ProductID
+WHERE o.OrderDate BETWEEN '2025-01-01' AND '2025-12-01'
+GROUP BY p.Category
+ORDER BY TotalSales DESC;
+ 
+
+Query 8: Suppliers and Their Products
+Retrieve all suppliers along with their contact info and products they supply.
+SELECT s.SupplierID, s.Name AS SupplierName, s.ContactInfo, s.Address,
+       p.Name AS ProductName, p.Category
+FROM Suppliers s
+LEFT JOIN Products p ON s.SupplierID = p.SupplierID
+ORDER BY s.Name, p.Name;
+ 
+
+Query 9: Customer Purchase History View
+Create a view displaying purchase history of a specific customer.
+CREATE OR REPLACE VIEW CustomerPurchaseHistory AS
+SELECT c.CustomerID, c.Name AS CustomerName, o.OrderID, o.OrderDate,
+       o.TotalAmount
+FROM Customer c
+JOIN `Order` o ON c.CustomerID = o.CustomerID;
+
+SELECT * FROM CustomerPurchaseHistory
+WHERE CustomerID = 1
+ORDER BY OrderDate;
+ 
+
+Query 10.1: High-Value Customers
+Customers who spent more than the average customer spend.
+SELECT c.CustomerID, c.Name, SUM(o.TotalAmount) AS TotalSpent
+FROM Customers c
+JOIN Orders o ON c.CustomerID = o.CustomerID
+GROUP BY c.CustomerID, c.Name
+HAVING SUM(o.TotalAmount) > (SELECT AVG(TotalAmount) FROM Orders)
+ORDER BY TotalSpent DESC;
+ 
+
+Query 10.2: Top 3 Best-Selling Products
+Top 3 best-selling products by quantity sold.
+SELECT p.ProductID, p.Name, SUM(oi.Quantity) AS TotalUnitsSold
+FROM Product p
+JOIN OrderItem oi ON p.ProductID = oi.ProductID
+GROUP BY p.ProductID, p.Name
+ORDER BY TotalUnitsSold DESC
+LIMIT 3;
+ 
+
+Query 10.3: Customer Segmentation Analysis
+Customer Segmentation and Lifetime Value Analysis.
+SELECT c.CustomerID, c.Name AS CustomerName, c.Email, c.Address,
+       COUNT(o.OrderID) AS TotalOrders,
+       COALESCE(SUM(o.TotalAmount), 0) AS AllTimeValue,
+       ROUND(COALESCE(AVG(o.TotalAmount), 0), 2) AS AverageOrderValue,
+       MIN(o.OrderDate) AS FirstPurchase,
+       MAX(o.OrderDate) AS LastPurchase,
+       COALESCE(DATEDIFF(MAX(o.OrderDate), MIN(o.OrderDate)), 0)
+           AS CustomerDays,
+       CASE
+           WHEN COUNT(o.OrderID) >= 3 THEN 'VIP Customer'
+           WHEN COUNT(o.OrderID) = 2 THEN 'Regular Customer'
+           WHEN COUNT(o.OrderID) = 1 THEN 'New Customer'
+           ELSE 'No Orders'
+       END AS CustomerSegment
+FROM Customer c
+LEFT JOIN `Order` o ON c.CustomerID = o.CustomerID
+GROUP BY c.CustomerID, c.Name, c.Email, c.Address
+ORDER BY AllTimeValue DESC;
+ 
+
+
+11. Database Design Choices and Normalization
+The database design considers data integrity, efficiency, and scalability for an e-commerce system handling customers, suppliers, products, orders, employees, and schedules. Key choices include using auto-incrementing integer primary keys for simplicity and performance in joins; DECIMAL(10,2) for prices to ensure precise financial calculations without floating-point errors; and VARCHAR/TEXT for flexible string data like addresses and descriptions. Constraints such as NOT NULL, UNIQUE (e.g., on emails), and CHECK (e.g., for non-negative prices and quantities) enforce data validity at the database level. Foreign keys with tailored ON DELETE/UPDATE actions such as RESTRICT to prevent invalid deletions (e.g., suppliers with active products) and CASCADE for automatic propagation (e.g., deleting an order removes its items) maintain integrity for references. The OrderItem table resolves the many-to-many relationship between orders and products, allowing detailed line items without redundancy.
+This schema is normalized, achieving 3NF. It satisfies 1NF by using atomic values (no multi-value fields), 2NF by eliminating partial dependencies (e.g., product details depend fully on ProductID, not partially on a composite key), and 3NF by avoiding transitive dependencies (e.g., supplier info is not duplicated in Product but referenced via foreign key) as can be seen here:
+•	Customer and Supplier tables store only their respective details, avoiding repetition.
+•	Product references Supplier via SupplierID, ensuring that supplier information is stored once and linked where needed.
+•	Order and OrderItem are separated to handle the one-to-many relationship between orders and their items, preventing data duplication and enabling efficient querying.
+•	Employee and Schedule are linked via EmployeeID, allowing flexible scheduling without duplicating employee details.
+
+12. ACID Properties
+I choose Atomicity and Consistency.
+What Atomicity means is that transactions like order processing are "all or nothing." For example, when a customer places an order, the system must create the order, add order items, and update stock levels. If any step fails (e.g., insufficient stock), atomicity rolls back the entire transaction, preventing incomplete or inconsistent orders.
+Consistency makes sure that all transactions stick to our predefined database rules, like prices must be non-negative (by using DECIMAL and CHECK) and stock levels are valid. For example, if an order’s total amount is calculated from its items, consistency ensures this total is always accurate, even if prices or quantities change elsewhere. 
+13. NoSQL vs. Relational Database
+This database design is highly relational and would not benefit from switching to a NoSQL database. Here’s why:
+The schema shows strong relationships between entities (e.g., Customers, Orders, OrderItems, Products, Suppliers, Employees, and Schedules). Relational databases are very good at enforcing these relationships through foreign keys, constraints, and transactions, ensuring data integrity and consistency. For example, the ON DELETE RESTRICT and ON UPDATE CASCADE rules in the design are critical for maintaining referential integrity something NoSQL databases typically lack.
+Additionally, our use case involves structured data with clear schemas (e.g., fixed fields like CustomerID, OrderDate, and Price). Relational databases are optimized for such structured data, offering efficient querying, joins, and aggregations. NoSQL databases, while flexible for unstructured (texts, images,…) or rapidly evolving data, would introduce unnecessary complexity for our scenario. For instance, querying all orders for a customer or calculating total sales would be straightforward in SQL but cumbersome in a NoSQL environment, where joins are often unsupported or inefficient.
+
